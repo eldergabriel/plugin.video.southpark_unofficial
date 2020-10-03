@@ -382,61 +382,70 @@ class SouthParkAddon(object):
 	def play_episode(self, season, episode):
 		data = self.data.episode(int(season) - 1, int(episode) - 1)
 		self.notify("{0} {1}".format(self.i18n.WARNING_LOADING, _encode(data["title"])), WARNING_TIMEOUT_SHORT)
-		mediagen = None
+		streams   = []
+		subtitles = []
 		try:
-			if len(data["mediagen"]) > 0:
-				url = base64.b64decode(data["mediagen"].encode('ascii')).decode('ascii')
+			for url in data["mediagen"]:
+				url = base64.b64decode(url.encode('ascii')).decode('ascii')
 				mediagen = _http_get(url, True)
-		except Exception as e:
-			log_error(e)
-			mediagen = None
 
-		if mediagen == None:
+				subs = _dk(mediagen, ["package", "video", "item", 0, "transcript", 0, "typographic"], [])
+				subs = list(filter(lambda x: "format" in x and x["format"] == "vtt", subs))
+				if len(subs) > 0:
+					subtitles.append(subs[0]["src"])
+
+				m3u8 = None
+				try:
+					m3u8 = _dk(mediagen, ["package", "video", "item", 0, "rendition", "src"], None)
+				except TypeError:
+					m3u8 = _dk(mediagen, ["package", "video", "item", 0, "rendition", 0, "src"], None)
+
+				if m3u8 == None:
+					raise Exception("invalid m3u8")
+				streams.append(m3u8)
+		except Exception as e:
+			streams = []
+			log_error(e)
+
+		if len(streams) < 1:
 			self.notify(self.i18n.WARNING_UNAVAILABLE_EPISODE, WARNING_TIMEOUT_LONG)
 			xbmcplugin.endOfDirectory(self.phandle)
 			return
 
-		log_error(_json.dumps(mediagen, indent=4))
-		m3u8 = None
-		try:
-			m3u8 = _dk(mediagen, ["package", "video", "item", 0, "rendition", "src"], None)
-		except TypeError:
-			m3u8 = _dk(mediagen, ["package", "video", "item", 0, "rendition", 0, "src"], None)
+		playlist = None
+		parts = len(streams)
+		if parts > 1:
+			playlist = xbmc.PlayList(xbmc.PLAYLIST_VIDEO)
+			playlist.clear()
 
-		if m3u8 == None:
-			self.notify("Can't play {}".format(data["title"]))
-			xbmcplugin.setResolvedUrl(handle=self.phandle, succeeded=True, listitem=None)
-			xbmcplugin.endOfDirectory(self.phandle)
-			return
+		firstitem = None
+		for i in range(0, parts):
+			playitem = xbmcgui.ListItem(path=streams[i])
+			title = data["title"]
+			if len(streams) > 1:
+				title = "{title} ({i}/{n})".format(title=title, i=(i + 1), n=parts)
 
-		subs = _dk(mediagen, ["package", "video", "item", 0, "transcript", 0, "typographic"], [])
-		subs = list(filter(lambda x: "format" in x and x["format"] == "vtt", subs))
-		if len(subs) > 0:
-			subs = subs[0]["src"]
-		else:
-			subs = None
-
-		playitem = xbmcgui.ListItem(path=m3u8)
-		playitem.setArt({'icon': data["image"], 'thumb': data["image"]})
-		playitem.setInfo('video', {'Title': data["title"], 'Plot': data["details"]})
-		playitem.setProperty('inputstreamaddon', 'inputstream.adaptive')
-		playitem.setProperty('inputstream.adaptive.manifest_type', 'hls')
-		if subs:
-			playitem.setSubtitles([subs])
+			playitem.setArt({'icon': data["image"], 'thumb': data["image"]})
+			playitem.setInfo('video', {'Title': title, 'Plot': data["details"]})
+			playitem.setProperty('inputstreamaddon', 'inputstream.adaptive')
+			playitem.setProperty('inputstream.adaptive.manifest_type', 'hls')
+			if len(subtitles) == len(streams):
+				playitem.setSubtitles([subtitles[i]])
+			if i == 0:
+				firstitem = playitem
+			if playlist != None:
+				playlist.add(url=streams[i], listitem=playitem, index=i)
 
 		player = xbmc.Player()
+		player.showSubtitles(self.options.show_subtitles())
 		if self.phandle == -1:
 			## this could be removed..
-			player.play(listitem=playitem)
+			if playlist != None:
+				player.play(playlist)
+			else:
+				player.play(listitem=firstitem)
 		else:
-			xbmcplugin.setResolvedUrl(handle=self.phandle, succeeded=True, listitem=playitem)
-
-		for s in range(1):
-			if player.isPlaying():
-				break
-			time.sleep(1)
-
-		player.showSubtitles(self.options.show_subtitles())
+			xbmcplugin.setResolvedUrl(handle=self.phandle, succeeded=True, listitem=firstitem)
 		xbmcplugin.endOfDirectory(self.phandle)
 
 
