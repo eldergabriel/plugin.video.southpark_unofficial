@@ -24,6 +24,9 @@ else:
 
 KODI_VERSION_MAJOR = int(xbmc.getInfoLabel('System.BuildVersion')[0:2])
 
+if KODI_VERSION_MAJOR > 18:
+	import xbmcvfs
+
 USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; rv:25.0) Gecko/20100101 Firefox/25.0'
 WARNING_TIMEOUT_LONG  = 7000
 WARNING_TIMEOUT_SHORT = 3000
@@ -217,13 +220,18 @@ class SP_Paths(object):
 	"""South Park plugin Paths"""
 	def __init__(self, addon_id):
 		super(SP_Paths, self).__init__()
-		self.PLUGIN_ICON      = xbmc.translatePath('special://home/addons/{0}/icon.png'.format(addon_id))
-		self.DEFAULT_FANART   = xbmc.translatePath('special://home/addons/{0}/fanart.jpg'.format(addon_id))
-		self.DEFAULT_IMGDIR   = xbmc.translatePath('special://home/addons/{0}/imgs/'.format(addon_id))
-		self.TEMPORARY_FOLDER = xbmc.translatePath('special://temp/southpark')
-		self.PLUGIN_DATA      = xbmc.translatePath('special://temp/southpark/data_{}.json')
+		self.PLUGIN_ICON      = self.translate_path('special://home/addons/{0}/icon.png'.format(addon_id))
+		self.DEFAULT_FANART   = self.translate_path('special://home/addons/{0}/fanart.jpg'.format(addon_id))
+		self.DEFAULT_IMGDIR   = self.translate_path('special://home/addons/{0}/imgs/'.format(addon_id))
+		self.TEMPORARY_FOLDER = self.translate_path('special://temp/southpark')
+		self.PLUGIN_DATA      = self.translate_path('special://temp/southpark/data_{}.json')
 		if not os.path.isdir(self.TEMPORARY_FOLDER):
 			os.mkdir(self.TEMPORARY_FOLDER, 0o755)
+
+	def translate_path(self, path):
+		if KODI_VERSION_MAJOR > 18:
+			return xbmcvfs.translatePath(path)
+		return xbmc.translatePath(path)
 
 class SP_Options(object):
 	"""South Park plugin Options"""
