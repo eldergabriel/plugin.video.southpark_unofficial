@@ -248,9 +248,7 @@ class SP_Options(object):
 		return self.addon.getSetting('cc') == "true"
 
 	def audio(self, as_string=False):
-		#au = int(self.addon.getSetting('audio_lang'))
-		#ES/DE/SE are disabled for no
-		au = 0
+		au = int(self.addon.getSetting('audio_lang'))
 		if as_string:
 			return self.AUDIO_AVAILABLE[au] 
 		return au
