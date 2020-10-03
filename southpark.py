@@ -399,6 +399,8 @@ class SouthParkAddon(object):
 				subs = list(filter(lambda x: "format" in x and x["format"] == "vtt", subs))
 				if len(subs) > 0:
 					subtitles.append(subs[0]["src"])
+				else:
+					subtitles.append(None)
 
 				m3u8 = None
 				try:
@@ -425,6 +427,7 @@ class SouthParkAddon(object):
 			playlist.clear()
 
 		firstitem = None
+		show_subs = self.options.show_subtitles()
 		for i in range(0, parts):
 			playitem = xbmcgui.ListItem(path=streams[i])
 			title = data["title"]
@@ -435,15 +438,17 @@ class SouthParkAddon(object):
 			playitem.setInfo('video', {'Title': title, 'Plot': data["details"]})
 			playitem.setProperty('inputstreamaddon', 'inputstream.adaptive')
 			playitem.setProperty('inputstream.adaptive.manifest_type', 'hls')
-			if len(subtitles) == len(streams):
+
+			if subtitles[i] != None and show_subs:
 				playitem.setSubtitles([subtitles[i]])
+
 			if i == 0:
 				firstitem = playitem
 			if playlist != None:
 				playlist.add(url=streams[i], listitem=playitem, index=i)
 
 		player = xbmc.Player()
-		player.showSubtitles(self.options.show_subtitles())
+		player.showSubtitles(show_subs)
 		if self.phandle == -1:
 			## this could be removed..
 			if playlist != None:
