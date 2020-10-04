@@ -372,7 +372,7 @@ class SouthParkAddon(object):
 		while retries < 10:
 			retries += 1
 			episode_data = self.data.random()
-			if episode_data['locked'] != None and len(episode_data['locked']) > 0:
+			if len(episode_data['mediagen']) < 1:
 				log_error("Found locked episode '{0}'. trying again!".format(episode_data["title"]))
 				continue
 			if self.options.playrandom():
