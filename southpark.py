@@ -238,7 +238,7 @@ class SP_Options(object):
 	def __init__(self, addon):
 		super(SP_Options, self).__init__()
 		self.addon = addon
-		self.AUDIO_AVAILABLE = ["en", "es", "de", "se"]
+		self.AUDIO_AVAILABLE = ["en", "es", "de", "se", "it"]
 		self.VIDEO_QUALITY   = ["high", "low"]
 
 	def debug(self):
